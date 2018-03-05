@@ -49,3 +49,28 @@ func ParseBitcodeFile(name string) (Module, error) {
 	C.free(unsafe.Pointer(errmsg))
 	return Module{}, err
 }
+
+// ParseBitcodeFileInContext parses the LLVM IR (bitcode) in the file with the
+// specified name, and returns a new LLVM module in the given context
+func ParseBitcodeFileInContext(context Context, name string) (Module, error) {
+	var buf C.LLVMMemoryBufferRef
+	var errmsg *C.char
+	var cfilename *C.char = C.CString(name)
+	defer C.free(unsafe.Pointer(cfilename))
+	result := C.LLVMCreateMemoryBufferWithContentsOfFile(cfilename, &buf, &errmsg)
+	if result != 0 {
+		err := errors.New(C.GoString(errmsg))
+		C.free(unsafe.Pointer(errmsg))
+		return Module{}, err
+	}
+	defer C.LLVMDisposeMemoryBuffer(buf)
+
+	var m Module
+	if C.LLVMParseBitcodeInContext2(context.C, buf, &m.C) == 0 {
+		return m, nil
+	}
+
+	err := errors.New(C.GoString(errmsg))
+	C.free(unsafe.Pointer(errmsg))
+	return Module{}, err
+}

@@ -37,12 +37,12 @@ const (
 func VerifyModule(m Module, a VerifierFailureAction) error {
 	var cmsg *C.char
 	broken := C.LLVMVerifyModule(m.C, C.LLVMVerifierFailureAction(a), &cmsg)
+	defer C.LLVMDisposeMessage(cmsg)
 
 	// C++'s verifyModule means isModuleBroken, so it returns false if
 	// there are no errors
 	if broken != 0 {
 		err := errors.New(C.GoString(cmsg))
-		C.LLVMDisposeMessage(cmsg)
 		return err
 	}
 	return nil
